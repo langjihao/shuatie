@@ -1,0 +1,71 @@
+# Python虚拟环境
+.venv/
+venv/
+ENV/
+env/
+
+# Python编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 打包目录
+build/
+dist/
+*.egg-info/
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# cx_Freeze
+build/exe.*
+
+# 日志文件
+*.log
+
+# 单元测试/覆盖率报告
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# 浏览器驱动和配置文件
+drivers/
+*.exe
+chromedriver
+geckodriver
+
+# IDE相关
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# 项目特定文件
+# 密码和配置文件
+*.ini
+config.json
+credentials.json
+password.db
+
+# 临时文件
+temp/
+tmp/
+
+# 自动生成的资源文件
+resource_rc.py
+ui_*.py 
+
+*.pyd
+
+dist/
