@@ -10,233 +10,114 @@ def get_high_dpi_stylesheet():
     return """
     /* 全局样式 */
     QWidget {
-        font-family: "Microsoft YaHei", "Segoe UI", Arial;
-        font-size: 10pt;
+        font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", Arial;
+        font-size: 14px;
+    }
+
+    /* 主窗口样式 */
+    QMainWindow {
+        min-width: 1280px;
+        min-height: 720px;
     }
 
     /* 按钮样式 */
     QPushButton {
-        min-height: 32px;
-        padding: 6px 12px;
+        min-height: 40px;
+        min-width: 100px;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 6px;
         background-color: #f0f0f0;
-        border: 1px solid #c0c0c0;
-        border-radius: 4px;
+        color: #333333;
     }
 
     QPushButton:hover {
         background-color: #e0e0e0;
     }
 
-    QPushButton:pressed {
-        background-color: #d0d0d0;
-    }
-
-    QPushButton:disabled {
-        background-color: #f8f8f8;
-        color: #a0a0a0;
-    }
-
-    /* 主要按钮样式 */
     QPushButton[primary=true] {
         background-color: #007bff;
         color: white;
-        border: 1px solid #0069d9;
     }
 
     QPushButton[primary=true]:hover {
-        background-color: #0069d9;
-    }
-
-    QPushButton[primary=true]:pressed {
-        background-color: #0062cc;
+        background-color: #0056b3;
     }
 
     /* 输入框样式 */
     QLineEdit, QTextEdit, QPlainTextEdit {
-        min-height: 32px;
-        padding: 4px 8px;
-        border: 1px solid #c0c0c0;
-        border-radius: 4px;
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 2px solid #ddd;
+        border-radius: 6px;
         background-color: white;
     }
 
     QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
-        border: 1px solid #80bdff;
-    }
-
-    /* 下拉框样式 */
-    QComboBox {
-        min-height: 32px;
-        padding: 4px 8px;
-        border: 1px solid #c0c0c0;
-        border-radius: 4px;
-        background-color: white;
-    }
-
-    QComboBox::drop-down {
-        subcontrol-origin: padding;
-        subcontrol-position: top right;
-        width: 20px;
-        border-left: 1px solid #c0c0c0;
-    }
-
-    /* 复选框样式 */
-    QCheckBox {
-        spacing: 8px;
-        min-height: 24px;
-    }
-
-    QCheckBox::indicator {
-        width: 18px;
-        height: 18px;
-    }
-
-    /* 单选框样式 */
-    QRadioButton {
-        spacing: 8px;
-        min-height: 24px;
-    }
-
-    QRadioButton::indicator {
-        width: 18px;
-        height: 18px;
+        border-color: #66afe9;
     }
 
     /* 标签页样式 */
     QTabWidget::pane {
-        border: 1px solid #c0c0c0;
-        border-radius: 4px;
-        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 15px;
     }
 
     QTabBar::tab {
-        background: #f0f0f0;
-        border: 1px solid #c0c0c0;
-        border-bottom-color: #c0c0c0;
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
-        min-width: 120px;
-        min-height: 32px;
-        padding: 6px 12px;
-        margin-right: 2px;
+        min-width: 160px;
+        min-height: 40px;
+        padding: 8px 16px;
+        margin-right: 4px;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        background: #f8f9fa;
     }
 
     QTabBar::tab:selected {
         background: white;
-        border-bottom-color: white;
+        border-bottom: 3px solid #007bff;
     }
 
     /* 表格样式 */
     QTableView {
-        gridline-color: #e0e0e0;
-        selection-background-color: #e0f0ff;
-        font-size: 10pt;
+        gridline-color: #eee;
+        selection-background-color: #e8f0fe;
     }
 
     QTableView::item {
-        padding: 6px;
-        min-height: 32px;
+        padding: 12px;
+        min-height: 40px;
     }
 
     QHeaderView::section {
-        background-color: #f5f5f5;
-        padding: 6px;
+        padding: 12px;
+        background-color: #f8f9fa;
+        border: none;
+        border-bottom: 2px solid #dee2e6;
         font-weight: bold;
-        border: 1px solid #e0e0e0;
-        min-height: 32px;
-        font-size: 10pt;
-    }
-
-    /* 滚动条样式 */
-    QScrollBar:vertical {
-        border: none;
-        background: #f0f0f0;
-        width: 16px;
-        margin: 0px;
-        border-radius: 8px;
-    }
-
-    QScrollBar::handle:vertical {
-        background: #c0c0c0;
-        min-height: 30px;
-        border-radius: 8px;
-    }
-
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-        height: 0px;
-    }
-
-    QScrollBar:horizontal {
-        border: none;
-        background: #f0f0f0;
-        height: 16px;
-        margin: 0px;
-        border-radius: 8px;
-    }
-
-    QScrollBar::handle:horizontal {
-        background: #c0c0c0;
-        min-width: 30px;
-        border-radius: 8px;
-    }
-
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        width: 0px;
+        min-height: 40px;
     }
 
     /* 分组框样式 */
     QGroupBox {
+        margin-top: 24px;
         font-weight: bold;
-        border: 1px solid #c0c0c0;
-        border-radius: 4px;
-        margin-top: 20px;
-        padding-top: 24px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 24px;
     }
 
     QGroupBox::title {
         subcontrol-origin: margin;
-        subcontrol-position: top left;
-        padding: 0 5px;
-        left: 10px;
+        left: 12px;
+        padding: 0 8px;
     }
 
     /* 状态栏样式 */
     QStatusBar {
-        background-color: #f8f8f8;
-        color: #505050;
-        min-height: 32px;
-    }
-
-    QStatusBar QLabel {
-        padding: 0 10px;
-    }
-
-    /* 菜单样式 */
-    QMenuBar {
-        background-color: #f8f8f8;
-        min-height: 32px;
-    }
-
-    QMenuBar::item {
-        padding: 6px 12px;
-        background: transparent;
-    }
-
-    QMenuBar::item:selected {
-        background: #e0e0e0;
-    }
-
-    QMenu {
-        background-color: white;
-        border: 1px solid #c0c0c0;
-    }
-
-    QMenu::item {
-        padding: 6px 30px 6px 20px;
-        min-height: 24px;
-    }
-
-    QMenu::item:selected {
-        background-color: #e0f0ff;
+        background: #f8f9fa;
+        min-height: 40px;
+        padding: 0 16px;
     }
     """

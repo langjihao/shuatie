@@ -7,9 +7,9 @@
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QFormLayout,
-    QLabel, QLineEdit, QPushButton, QCheckBox, QSpinBox
+    QLabel, QLineEdit, QPushButton, QCheckBox, QSpinBox, QMessageBox
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from ui.dialogs.message_box import HighDPIMessageBox
 from core.password_manager import PasswordManager
@@ -17,6 +17,8 @@ from core.password_manager import PasswordManager
 
 class SettingsTab(QWidget):
     """设置标签页"""
+
+    unlocked_changed = pyqtSignal(bool)  # 添加信号
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -64,19 +66,19 @@ class SettingsTab(QWidget):
         unlock_layout.addRow("", unlock_button_layout)
 
         # 密码提示
-        password_hint = QLabel(
-            "密码规则：<br>"
-            "1. 基于当天日期计算：年月日数字乘以2的后6位数<br>"
-            "2. 如果解锁时间在当日中午12:00前（不含12:00），使用上述计算结果<br>"
-            "3. 如果解锁时间在当日中午12:00后（含12:00），使用上述计算结果减去12"
-        )
-        password_hint.setWordWrap(True)
-        password_hint.setStyleSheet("color: #666; font-size: 9pt;")
-        unlock_layout.addRow("", password_hint)
+        # password_hint = QLabel(
+        #     "密码规则：<br>"
+        #     "1. 基于当天日期计算：年月日数字乘以2的后6位数<br>"
+        #     "2. 如果解锁时间在当日中午12:00前（不含12:00），使用上述计算结果<br>"
+        #     "3. 如果解锁时间在当日中午12:00后（含12:00），使用上述计算结果减去12"
+        # )
+        # password_hint.setWordWrap(True)
+        # password_hint.setStyleSheet("color: #666; font-size: 9pt;")
+        # unlock_layout.addRow("", password_hint)
 
         # 创建浏览器设置组
-        browser_group = QGroupBox("浏览器设置")
-        browser_layout = QFormLayout(browser_group)
+        self.browser_group = QGroupBox("浏览器设置")
+        browser_layout = QFormLayout(self.browser_group)
         browser_layout.setContentsMargins(15, 20, 15, 15)
         browser_layout.setSpacing(10)
 
@@ -93,7 +95,7 @@ class SettingsTab(QWidget):
 
         # 添加组件到主布局
         main_layout.addWidget(unlock_group)
-        main_layout.addWidget(browser_group)
+        main_layout.addWidget(self.browser_group)
         main_layout.addStretch()
 
         # 更新UI状态
@@ -124,15 +126,22 @@ class SettingsTab(QWidget):
             HighDPIMessageBox.warning(self, "输入错误", "密码应为数字。")
             return
 
-        if self.password_manager.unlock(password):
-            HighDPIMessageBox.information(self, "解锁成功", "软件已成功解锁，您现在可以使用所有功能。")
-
-            # 更新主窗口解锁状态
-            if self.main_window:
-                self.main_window.is_unlocked = True
-                self.main_window._update_unlock_status()
-
-            # 更新UI状态
+        print(f"解锁前状态: {self.password_manager.is_unlocked()}")
+        if self.password_manager.verify_password(password):  # 修改这里，使用verify_password而不是unlock
+            print(f"解锁后状态: {self.password_manager.is_unlocked()}")
+            QMessageBox.information(self, "解锁成功", "软件已解锁！")
             self._update_ui_state()
+            self.unlocked_changed.emit(True)  # 发送解锁信号
         else:
-            HighDPIMessageBox.warning(self, "解锁失败", "密码错误，请检查后重试。")
+            QMessageBox.warning(self, "解锁失败", "密码错误！")
+
+    def set_enabled(self, enabled):
+        """设置启用状态"""
+        # 仅更新浏览器设置组的标题和控件状态
+        # 解锁组保持原样，因为它需要一直可用
+        self.browser_group.setTitle("浏览器设置" if enabled else "")
+        
+        # 启用/禁用浏览器设置控件
+        self.headless_checkbox.setEnabled(enabled)
+        self.timeout_spinbox.setEnabled(enabled)
+        self.timeout_spinbox.setPrefix("页面加载超时：" if enabled else "")

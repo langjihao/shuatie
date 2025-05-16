@@ -10,7 +10,11 @@ import sys
 import os
 import subprocess
 from PyQt5.QtWidgets import QApplication, QMessageBox
-from PyQt5.QtCore import QTranslator, QLocale, Qt
+from PyQt5.QtCore import QTranslator, QLocale, Qt, QCoreApplication
+
+# 在创建QApplication之前设置高DPI属性
+QCoreApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+QCoreApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
 from ui.main_window import MainWindow
 from core.password_manager import PasswordManager
@@ -54,10 +58,6 @@ def install_playwright_browsers():
 
 def main():
     """主函数"""
-    # 启用高DPI缩放 - PyQt5版本
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
     # 创建应用
     app = QApplication(sys.argv)
 

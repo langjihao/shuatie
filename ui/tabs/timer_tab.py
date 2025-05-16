@@ -33,8 +33,8 @@ class TimerTab(QWidget):
         main_layout.setSpacing(15)
 
         # 创建启动方式组
-        start_group = QGroupBox("启动方式")
-        start_layout = QVBoxLayout(start_group)
+        self.start_group = QGroupBox("启动方式")
+        start_layout = QVBoxLayout(self.start_group)
         start_layout.setContentsMargins(15, 20, 15, 15)
         start_layout.setSpacing(10)
 
@@ -90,18 +90,18 @@ class TimerTab(QWidget):
         start_layout.addLayout(timer_layout)
 
         # 创建浏览器参数组
-        browser_group = QGroupBox("浏览器参数")
-        browser_layout = QFormLayout(browser_group)
+        self.browser_group = QGroupBox("浏览器参数")
+        browser_layout = QFormLayout(self.browser_group)
         browser_layout.setContentsMargins(15, 20, 15, 15)
         browser_layout.setSpacing(10)
 
         # 打开链接后等待时间
-        self.open_wait_time = QDoubleSpinBox()
-        self.open_wait_time.setRange(0, 20)
-        self.open_wait_time.setValue(2)
-        self.open_wait_time.setSingleStep(0.5)
-        self.open_wait_time.setSuffix(" 秒")
-        browser_layout.addRow("打开链接后等待：", self.open_wait_time)
+        # self.open_wait_time = QDoubleSpinBox()
+        # self.open_wait_time.setRange(0, 20)
+        # self.open_wait_time.setValue(2)
+        # self.open_wait_time.setSingleStep(0.5)
+        # self.open_wait_time.setSuffix(" 秒")
+        # browser_layout.addRow("打开链接后等待：", self.open_wait_time)
 
         # 页面滚动速度
         self.scroll_speed = QDoubleSpinBox()
@@ -112,12 +112,12 @@ class TimerTab(QWidget):
         browser_layout.addRow("页面滚动速度：", self.scroll_speed)
 
         # 随机点击选项
-        self.random_click_checkbox = QCheckBox("启用随机点击（模拟真实浏览）")
-        browser_layout.addRow("", self.random_click_checkbox)
+        # self.random_click_checkbox = QCheckBox("启用随机点击（模拟真实浏览）")
+        # browser_layout.addRow("", self.random_click_checkbox)
 
         # 添加组件到主布局
-        main_layout.addWidget(start_group)
-        main_layout.addWidget(browser_group)
+        main_layout.addWidget(self.start_group)
+        main_layout.addWidget(self.browser_group)
         main_layout.addStretch()
 
     def _on_start_mode_changed(self):
@@ -126,3 +126,14 @@ class TimerTab(QWidget):
         self.countdown_hours.setEnabled(self.countdown_radio.isChecked())
         self.countdown_minutes.setEnabled(self.countdown_radio.isChecked())
         self.timer_time.setEnabled(self.timer_radio.isChecked())
+
+    def set_enabled(self, enabled):
+        """设置启用状态"""
+        # 更新组标题
+        self.start_group.setTitle("启动方式" if enabled else "")
+        self.browser_group.setTitle("浏览器参数" if enabled else "")
+
+        # 更新单选按钮文本
+        self.direct_radio.setText("直接启动" if enabled else "")
+        self.countdown_radio.setText("倒计时启动：" if enabled else "")
+        self.timer_radio.setText("定时启动：" if enabled else "")
