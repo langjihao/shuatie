@@ -14,6 +14,9 @@ def get_base_path():
     """获取基础路径"""
     if getattr(sys, 'frozen', False):
         # 打包后的路径
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller打包后的路径
+            return sys._MEIPASS
         return os.path.dirname(sys.executable)
     else:
         # 开发环境路径
@@ -29,8 +32,9 @@ def test_browser(executable_path):
         bool: 浏览器是否可用
     """
     try:
-        # 只检查文件是否存在及其依赖文件
+        # 检查文件是否存在
         if not os.path.exists(executable_path):
+            print(f"浏览器可执行文件不存在: {executable_path}")
             return False
             
         browser_dir = os.path.dirname(executable_path)
@@ -41,10 +45,12 @@ def test_browser(executable_path):
         ]
         
         for file in required_files:
-            if not os.path.exists(os.path.join(browser_dir, file)):
-                print(f"缺少必要文件: {file}")
+            file_path = os.path.join(browser_dir, file)
+            if not os.path.exists(file_path):
+                print(f"缺少必要文件: {file_path}")
                 return False
-        
+            
+        print(f"浏览器目录 {browser_dir} 中的所有必要文件都存在")
         return True
         
     except Exception as e:
@@ -61,32 +67,42 @@ def get_browser_path(headless=False):
         str: 浏览器可执行文件的完整路径
     """
     base_path = get_base_path()
+    print(f"基础路径: {base_path}")
     
-    # 首先尝试使用完整版Chrome
-    chrome_path = os.path.join(base_path, 'resources', 'chromium-1169', 'chrome-win', 'chrome.exe')
-    if os.path.exists(chrome_path):
-        print(f"尝试完整版浏览器: {chrome_path}")
-        if test_browser(chrome_path):
-            print("完整版浏览器可用")
-            return chrome_path
-        else:
-            print("完整版浏览器不可用，尝试其他选项")
+    # 尝试所有可能的浏览器路径
+    possible_paths = []
     
-    # 如果完整版不可用且需要无头模式，尝试使用headless_shell
-    if headless:
-        headless_path = os.path.join(base_path, 'resources', 'chromium_headless_shell-1169', 'chrome-win', 'headless_shell.exe')
-        if os.path.exists(headless_path):
-            print(f"尝试无头浏览器: {headless_path}")
-            if test_browser(headless_path):
-                print("无头浏览器可用")
-                return headless_path
+    # 添加完整版Chrome路径
+    chrome_paths = [
+        os.path.join(base_path, 'resources', 'chromium-1169', 'chrome-win', 'chrome.exe'),
+        os.path.join(base_path, 'chromium-1169', 'chrome-win', 'chrome.exe'),
+        os.path.join(os.path.dirname(base_path), 'resources', 'chromium-1169', 'chrome-win', 'chrome.exe')
+    ]
+    
+    # 添加无头版Chrome路径
+    headless_paths = [
+        os.path.join(base_path, 'resources', 'chromium_headless_shell-1169', 'chrome-win', 'headless_shell.exe'),
+        os.path.join(base_path, 'chromium_headless_shell-1169', 'chrome-win', 'headless_shell.exe'),
+        os.path.join(os.path.dirname(base_path), 'resources', 'chromium_headless_shell-1169', 'chrome-win', 'headless_shell.exe')
+    ]
+    
+    # 根据模式选择要检查的路径
+    paths_to_check = headless_paths + chrome_paths if headless else chrome_paths + headless_paths
+    
+    # 检查每个可能的路径
+    for path in paths_to_check:
+        print(f"检查路径: {path}")
+        if os.path.exists(path):
+            print(f"找到浏览器文件: {path}")
+            if test_browser(path):
+                print(f"浏览器可用: {path}")
+                return path
             else:
-                print("无头浏览器不可用")
+                print(f"浏览器文件存在但不可用: {path}")
     
-    # 如果都不可用，抛出异常
+    # 如果所有路径都不可用，抛出异常
     raise Exception(
         f"找不到可用的浏览器。\n"
-        f"已检查以下路径：\n"
-        f"1. 完整版Chrome: {chrome_path}\n"
-        f"2. 无头版本: {os.path.join(base_path, 'resources', 'chromium_headless_shell-1169', 'chrome-win', 'headless_shell.exe')}"
+        f"已检查以下路径：\n" +
+        "\n".join(f"{i+1}. {path}" for i, path in enumerate(paths_to_check))
     )

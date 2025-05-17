@@ -85,11 +85,16 @@ class BrowserController(QObject):
         """检查是否正在运行"""
         return self.is_running_flag
 
-    def start(self, queue_data):
+    def start(self, queue_data, timer_settings=None):
         """启动浏览器控制器
         
         Args:
             queue_data (list): 任务队列数据
+            timer_settings (dict): 定时器设置，包含以下字段：
+                - start_type: 启动方式，'direct'(直接)/'countdown'(倒计时)/'time_point'(定时点)
+                - countdown_hours: 倒计时小时数
+                - countdown_minutes: 倒计时分钟数
+                - time_point: 定时点，格式为"HH:MM"
         """
         if self.is_running_flag:
             return
@@ -105,7 +110,7 @@ class BrowserController(QObject):
         self.current_loop_count = 0
 
         # 创建线程
-        self.thread = threading.Thread(target=self._run_task, args=(queue_data,))
+        self.thread = threading.Thread(target=self._run_task, args=(queue_data, timer_settings))
         self.thread.daemon = True
         self.thread.start()
 
@@ -224,18 +229,88 @@ class BrowserController(QObject):
             self.stop()
             return False
 
-    def _run_task(self, queue_data):
+    def _run_task(self, queue_data, timer_settings=None):
         """运行任务
         
         Args:
             queue_data (list): 任务队列数据
+            timer_settings (dict): 定时器设置
         """
         try:
-            # 初始化浏览器
-            self._initialize_browser()
+            # 处理定时启动设置
+            if timer_settings and timer_settings.get('start_type') != 'direct':
+                self._log("准备定时启动...")
+                if timer_settings.get('start_type') == 'countdown':
+                    # 倒计时启动
+                    total_minutes = (timer_settings.get('countdown_hours', 0) * 60 + 
+                                  timer_settings.get('countdown_minutes', 0))
+                    if total_minutes > 0:
+                        total_seconds = total_minutes * 60
+                        self._log(f"将在 {total_minutes} 分钟后开始任务...")
+                        
+                        # 倒计时显示
+                        start_time = time.time()
+                        while time.time() - start_time < total_seconds and self.is_running_flag:
+                            remaining_seconds = int(total_seconds - (time.time() - start_time))
+                            remaining_minutes = remaining_seconds // 60
+                            remaining_secs = remaining_seconds % 60
+                            
+                            if remaining_seconds % 60 == 0 or remaining_seconds <= 10:
+                                if remaining_minutes > 0:
+                                    self._log(f"倒计时: 还剩 {remaining_minutes} 分钟 {remaining_secs} 秒")
+                                else:
+                                    self._log(f"倒计时: 还剩 {remaining_secs} 秒")
+                            time.sleep(1)
+                        
+                        if not self.is_running_flag:
+                            self._log("倒计时被取消")
+                            return
+                        self._log("倒计时结束，开始执行任务...")
+                
+                elif timer_settings.get('start_type') == 'time_point':
+                    # 定时点启动
+                    target_time = timer_settings.get('time_point', '00:00')
+                    target_hour, target_minute = map(int, target_time.split(':'))
+                    
+                    now = datetime.now()
+                    target = now.replace(hour=target_hour, minute=target_minute, second=0, microsecond=0)
+                    
+                    # 如果目标时间已过，设置为明天
+                    if target <= now:
+                        target = target + timedelta(days=1)
+                    
+                    wait_seconds = (target - now).total_seconds()
+                    self._log(f"将在 {target.strftime('%Y-%m-%d %H:%M:%S')} 开始任务...")
+                    
+                    # 定时显示
+                    start_time = time.time()
+                    while time.time() - start_time < wait_seconds and self.is_running_flag:
+                        remaining = wait_seconds - (time.time() - start_time)
+                        hours = int(remaining // 3600)
+                        minutes = int((remaining % 3600) // 60)
+                        
+                        if int(remaining) % 60 == 0:  # 每分钟显示一次
+                            if hours > 0:
+                                self._log(f"等待开始: 还剩 {hours} 小时 {minutes} 分钟")
+                            else:
+                                self._log(f"等待开始: 还剩 {minutes} 分钟")
+                        elif remaining <= 60:  # 最后一分钟每秒显示
+                            self._log(f"等待开始: 还剩 {int(remaining)} 秒")
+                        
+                        time.sleep(1)
+                    
+                    if not self.is_running_flag:
+                        self._log("定时任务被取消")
+                        return
+                    self._log("到达指定时间，开始执行任务...")
 
+            # 初始化浏览器
+            if not self._initialize_browser():
+                return
+                
             # 开始执行队列
             self._log("开始执行浏览任务...")
+
             while self.is_running_flag and queue_data:
                 # 暂停时等待恢复
                 while not self._pause_event.is_set():
@@ -374,33 +449,47 @@ class BrowserController(QObject):
     def _simulate_scrolling(self, duration):
         """模拟滚动"""
         start_time = time.time()
-        scroll_speed = self.page.evaluate("() => window.__scroll_speed || 1.0")  # 获取滚动速度
-
-        while time.time() - start_time < duration and self.is_running_flag:
+        current_time = time.time()
+        
+        while current_time - start_time < duration and self.is_running_flag:
             try:
                 # 暂停时等待恢复
                 while not self._pause_event.is_set():
                     time.sleep(0.5)
 
+                if not self.page:
+                    break
+
                 # 获取页面高度
-                page_height = self.page.evaluate("document.body.scrollHeight")
+                try:
+                    page_height = self.page.evaluate("document.body.scrollHeight")
+                except:
+                    # 如果页面已关闭，退出滚动
+                    break
 
-                # 根据滚动速度调整滚动步长
-                scroll_step = int(page_height * 0.1 * scroll_speed)  # 基础步长的倍数
-
-                # 随机滚动位置
-                scroll_y = random.randint(0, page_height)
+                # 计算滚动位置
+                elapsed_ratio = (current_time - start_time) / duration
+                base_scroll = int(page_height * elapsed_ratio)
+                random_offset = random.randint(-100, 100)
+                scroll_y = min(max(0, base_scroll + random_offset), page_height)
 
                 # 执行滚动
-                self.page.evaluate(f"window.scrollTo(0, {scroll_y})")
+                try:
+                    self.page.evaluate(f"window.scrollTo(0, {scroll_y})")
+                except:
+                    # 如果页面已关闭，退出滚动
+                    break
 
-                # 随机等待一小段时间，考虑滚动速度
-                wait_time = random.uniform(0.5, 2.0) / scroll_speed
-                time.sleep(wait_time)
+                # 等待一小段时间
+                time.sleep(0.5)
+                current_time = time.time()
 
             except Exception as e:
-                self._log(f"滚动失败: {e}")
+                self._log(f"滚动过程出现错误: {e}")
+                if "Target closed" in str(e) or "Target page, context or browser has been closed" in str(e):
+                    break
                 time.sleep(0.5)
+                current_time = time.time()
 
     def _ensure_browser_visible(self):
         """确保浏览器窗口可见"""

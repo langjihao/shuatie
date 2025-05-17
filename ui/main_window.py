@@ -15,6 +15,7 @@ from PyQt5.QtGui import QIcon
 
 from ui.tabs.queue_tab import QueueTab
 from ui.tabs.settings_tab import SettingsTab
+from ui.tabs.timer_tab import TimerTab  # 添加TimerTab导入
 from ui.dialogs.message_box import HighDPIMessageBox
 from core.browser_controller import BrowserController
 from ui.tabs.log_tab import LogTab
@@ -45,9 +46,6 @@ class MainWindow(QMainWindow):
         
         # 初始化浏览器控制器
         self.browser_controller = BrowserController()
-        # 连接信号
-        self.browser_controller.log_message.connect(self._on_log_message)
-        self.browser_controller.status_changed.connect(self._on_status_changed)
         
         # 初始化UI
         self._init_ui()
@@ -83,6 +81,11 @@ class MainWindow(QMainWindow):
         self.queue_tab = QueueTab(self)
         self.tab_widget.addTab(self.queue_tab, "队列管理")
         self.tabs.append(self.queue_tab)
+
+        # 添加定时设置标签页
+        self.timer_tab = TimerTab(self)
+        self.tab_widget.addTab(self.timer_tab, "定时设置")
+        self.tabs.append(self.timer_tab)
 
         # 添加日志标签页
         self.log_tab = LogTab(self)
@@ -186,7 +189,8 @@ class MainWindow(QMainWindow):
                     'loop_type': 'time' if "时间" in self.queue_tab.queue_table.item(row, 6).text() else 'count',
                     'loop_time': int(self.queue_tab.queue_table.item(row, 6).text().split(":")[1].strip().replace("分钟", "")) if "时间" in self.queue_tab.queue_table.item(row, 6).text() else 60,
                     'loop_count': int(self.queue_tab.queue_table.item(row, 6).text().split(":")[1].strip().replace("次", "")) if "次数" in self.queue_tab.queue_table.item(row, 6).text() else 1,
-                    'scroll_speed': 1.0  # 设置为默认滚动速度
+                    'scroll_speed': self.timer_tab.scroll_speed.value(),  # 从timer_tab获取滚动速度
+                    'random_click': self.timer_tab.random_click_checkbox.isChecked()  # 从timer_tab获取随机点击设置
                 })
 
         # 检查队列是否为空
@@ -194,12 +198,31 @@ class MainWindow(QMainWindow):
             HighDPIMessageBox.warning(self, "队列为空", "请先添加至少一个任务到队列中。")
             return
 
+        # 获取定时设置
+        timer_settings = {
+            'start_type': 'direct',  # 默认直接启动
+            'countdown_hours': 0,
+            'countdown_minutes': 0,
+            'time_point': '00:00',
+            'auto_shutdown': self.queue_tab.shutdown_checkbox.isChecked(),
+            'shutdown_time': self.queue_tab.shutdown_time.value()
+        }
+
+        # 根据定时标签页的选择更新启动方式
+        if self.timer_tab.countdown_radio.isChecked():
+            timer_settings['start_type'] = 'countdown'
+            timer_settings['countdown_hours'] = self.timer_tab.countdown_hours.value()
+            timer_settings['countdown_minutes'] = self.timer_tab.countdown_minutes.value()
+        elif self.timer_tab.timer_radio.isChecked():
+            timer_settings['start_type'] = 'time_point'
+            timer_settings['time_point'] = self.timer_tab.timer_time.time().toString('HH:mm')
+
         try:
             # 设置无头模式
             self.browser_controller.set_headless(self.headless_checkbox.isChecked())
             
             # 启动浏览器控制器
-            self.browser_controller.start(queue_data)
+            self.browser_controller.start(queue_data, timer_settings)
 
             # 更新UI状态
             self.status_bar.showMessage("正在运行...")

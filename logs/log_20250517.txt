@@ -31,3 +31,17 @@
 [2025-05-17 09:31:30] 循环时间: 0.6/60分钟
 [2025-05-17 09:31:30] 任务完成，关闭浏览器...
 [2025-05-17 09:31:30] 浏览器控制器已停止
+[2025-05-17 20:06:56] 开始执行浏览任务...
+[2025-05-17 20:06:56] 执行任务 1/1: https://www.baidu.com
+[2025-05-17 20:06:56] 创建新页面...
+[2025-05-17 20:06:56] 正在打开: https://www.baidu.com
+[2025-05-17 20:06:57] 等待页面加载: 2.0秒
+[2025-05-17 20:06:59] 浏览页面并滚动: 5.0秒
+[2025-05-17 20:07:01] 滚动失败: Page.evaluate: Target page, context or browser has been closed
+[2025-05-17 20:07:02] 滚动失败: Page.evaluate: Target page, context or browser has been closed
+[2025-05-17 20:07:02] 滚动失败: Page.evaluate: Target page, context or browser has been closed
+[2025-05-17 20:07:03] 滚动失败: Page.evaluate: Target page, context or browser has been closed
+[2025-05-17 20:07:03] 滚动失败: Page.evaluate: Target page, context or browser has been closed
+[2025-05-17 20:07:04] 滚动失败: Page.evaluate: Target page, context or browser has been closed
+[2025-05-17 20:07:04] 关闭页面...
+[2025-05-17 20:07:04] 等待: 1.0秒

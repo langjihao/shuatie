@@ -70,21 +70,21 @@ def main():
     app.setStyleSheet(get_high_dpi_stylesheet())
 
     # 检查Playwright浏览器是否已安装
-    if not check_playwright_browsers():
-        reply = QMessageBox.question(
-            None,
-            "安装浏览器",
-            "需要安装浏览器组件才能正常运行。是否现在安装？",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes
-        )
+    #if not check_playwright_browsers():
+        # reply = QMessageBox.question(
+        #     None,
+        #     "安装浏览器",
+        #     "需要安装浏览器组件才能正常运行。是否现在安装？",
+        #     QMessageBox.Yes | QMessageBox.No,
+        #     QMessageBox.Yes
+        # )
 
-        if reply == QMessageBox.Yes:
-            QMessageBox.information(None, "安装中", "正在安装浏览器组件，请稍候...")
-            if install_playwright_browsers():
-                QMessageBox.information(None, "安装完成", "浏览器组件安装成功！")
-            else:
-                QMessageBox.warning(None, "安装失败", "浏览器组件安装失败，程序可能无法正常运行。")
+        # if reply == QMessageBox.Yes:
+        #     QMessageBox.information(None, "安装中", "正在安装浏览器组件，请稍候...")
+        #     if install_playwright_browsers():
+        #         QMessageBox.information(None, "安装完成", "浏览器组件安装成功！")
+        #     else:
+        #         QMessageBox.warning(None, "安装失败", "浏览器组件安装失败，程序可能无法正常运行。")
 
     # 检查是否已解锁
     password_manager = PasswordManager()
