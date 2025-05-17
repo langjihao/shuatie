@@ -45,6 +45,9 @@ class MainWindow(QMainWindow):
         
         # 初始化浏览器控制器
         self.browser_controller = BrowserController()
+        # 连接信号
+        self.browser_controller.log_message.connect(self._on_log_message)
+        self.browser_controller.status_changed.connect(self._on_status_changed)
         
         # 初始化UI
         self._init_ui()
