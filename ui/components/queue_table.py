@@ -38,15 +38,21 @@ class QueueTable(QTableWidget):
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         
         # 设置列宽
-        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)  # 链接列自适应宽度
+        # 链接列设置为自适应，但最小宽度为400像素
+        self.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.setColumnWidth(0, 600)  # 链接列宽度
+        self.horizontalHeader().setMinimumSectionSize(400)  # 设置最小列宽
+        
+        # 其他列设置固定宽度
         self.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)    # 循环次数列固定宽度
         self.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)    # 循环时间列固定宽度
         self.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)    # 操作列固定宽度
         self.horizontalHeader().setSectionResizeMode(4, QHeaderView.Fixed)    # 状态列固定宽度
         
-        self.setColumnWidth(1, 100)  # 循环次数列宽
-        self.setColumnWidth(2, 120)  # 循环时间列宽
-        self.setColumnWidth(3, 150)  # 操作列宽
+        # 优化各列宽度
+        self.setColumnWidth(1, 120)  # 循环次数列宽
+        self.setColumnWidth(2, 140)  # 循环时间列宽
+        self.setColumnWidth(3, 160)  # 操作列宽
         self.setColumnWidth(4, 100)  # 状态列宽
         
         # 初始化表格

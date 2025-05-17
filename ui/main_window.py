@@ -8,7 +8,7 @@
 import os
 from PyQt5.QtWidgets import (
     QMainWindow, QTabWidget, QWidget, QVBoxLayout,
-    QHBoxLayout, QLabel, QPushButton, QStatusBar, QTableWidgetItem, QCheckBox
+    QHBoxLayout, QLabel, QPushButton, QStatusBar, QTableWidgetItem, QCheckBox, QApplication
 )
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QIcon
@@ -25,16 +25,27 @@ class MainWindow(QMainWindow):
 
     def __init__(self, is_unlocked=False):
         super().__init__()
-
-        # 设置解锁状态
+        
+        # 保存解锁状态
         self.is_unlocked = is_unlocked
-
-        # 创建浏览器控制器
+        
+        # 设置窗口标题和图标
+        self.setWindowTitle("刷帖助手")
+        self.setWindowIcon(QIcon("resources/icon.png"))
+        
+        # 设置窗口大小和位置
+        screen_geometry = QApplication.primaryScreen().geometry()
+        window_width = min(1280, int(screen_geometry.width() * 0.75))  # 最大宽度1280
+        window_height = min(800, int(screen_geometry.height() * 0.75))  # 最大高度800
+        self.resize(window_width, window_height)
+        
+        # 居中显示
+        center_point = screen_geometry.center()
+        self.move(center_point.x() - window_width // 2, center_point.y() - window_height // 2)
+        
+        # 初始化浏览器控制器
         self.browser_controller = BrowserController()
-        # 连接信号
-        self.browser_controller.status_changed.connect(self._on_status_changed)
-        self.browser_controller.log_message.connect(self._on_log_message)
-
+        
         # 初始化UI
         self._init_ui()
 
@@ -172,28 +183,8 @@ class MainWindow(QMainWindow):
                     'loop_type': 'time' if "时间" in self.queue_tab.queue_table.item(row, 6).text() else 'count',
                     'loop_time': int(self.queue_tab.queue_table.item(row, 6).text().split(":")[1].strip().replace("分钟", "")) if "时间" in self.queue_tab.queue_table.item(row, 6).text() else 60,
                     'loop_count': int(self.queue_tab.queue_table.item(row, 6).text().split(":")[1].strip().replace("次", "")) if "次数" in self.queue_tab.queue_table.item(row, 6).text() else 1,
-                    'scroll_speed': self.queue_tab.scroll_speed.value(),
-                    'random_click': self.queue_tab.random_click_checkbox.isChecked()
+                    'scroll_speed': 1.0  # 设置为默认滚动速度
                 })
-
-        # 获取定时设置
-        timer_settings = {
-            'start_type': 'direct',  # 默认直接启动
-            'countdown_hours': 0,
-            'countdown_minutes': 0,
-            'time_point': '00:00',
-            'auto_shutdown': self.queue_tab.shutdown_checkbox.isChecked(),
-            'shutdown_time': self.queue_tab.shutdown_time.value()
-        }
-
-        # 根据队列标签页的启动方式设置更新
-        if self.queue_tab.countdown_radio.isChecked():
-            timer_settings['start_type'] = 'countdown'
-            timer_settings['countdown_hours'] = self.queue_tab.countdown_hours.value()
-            timer_settings['countdown_minutes'] = self.queue_tab.countdown_minutes.value()
-        elif self.queue_tab.timepoint_radio.isChecked():
-            timer_settings['start_type'] = 'time_point'
-            timer_settings['time_point'] = self.queue_tab.time_edit.time().toString('HH:mm')
 
         # 检查队列是否为空
         if not queue_data:
@@ -205,7 +196,7 @@ class MainWindow(QMainWindow):
             self.browser_controller.set_headless(self.headless_checkbox.isChecked())
             
             # 启动浏览器控制器
-            self.browser_controller.start(queue_data, timer_settings)
+            self.browser_controller.start(queue_data)
 
             # 更新UI状态
             self.status_bar.showMessage("正在运行...")

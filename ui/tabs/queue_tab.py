@@ -50,8 +50,8 @@ class QueueTab(QWidget):
         browser_layout.addRow("页面滚动速度：", self.scroll_speed)
 
         # 随机点击选项
-        self.random_click_checkbox = QCheckBox("启用随机点击（模拟真实浏览）")
-        browser_layout.addRow("", self.random_click_checkbox)
+        # self.random_click_checkbox = QCheckBox("启用随机点击（模拟真实浏览）")
+        # browser_layout.addRow("", self.random_click_checkbox)
 
         main_layout.addWidget(browser_group)
 

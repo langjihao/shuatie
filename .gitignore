@@ -69,3 +69,5 @@ ui_*.py
 *.pyd
 
 dist/
+
+resources/

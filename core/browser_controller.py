@@ -12,7 +12,7 @@ import threading
 import subprocess
 from datetime import datetime, timedelta
 from PyQt5.QtCore import QObject, pyqtSignal
-
+from .browser_resources import get_browser_path
 try:
     from playwright.sync_api import sync_playwright
     PLAYWRIGHT_INSTALLED = True
@@ -85,8 +85,12 @@ class BrowserController(QObject):
         """检查是否正在运行"""
         return self.is_running_flag
 
-    def start(self, queue_data, timer_settings):
-        """启动浏览器控制器"""
+    def start(self, queue_data):
+        """启动浏览器控制器
+        
+        Args:
+            queue_data (list): 任务队列数据
+        """
         if self.is_running_flag:
             return
 
@@ -94,22 +98,14 @@ class BrowserController(QObject):
         global sync_playwright, PLAYWRIGHT_INSTALLED
         if not PLAYWRIGHT_INSTALLED:
             self._log("Playwright未安装，尝试安装...")
-            if not install_playwright():
-                raise Exception("无法安装Playwright，请手动安装: pip install playwright")
-
-            # 重新导入
-            try:
-                from playwright.sync_api import sync_playwright
-                PLAYWRIGHT_INSTALLED = True
-            except ImportError:
-                raise Exception("安装Playwright后仍无法导入，请重启应用")
+            raise Exception("无法找到Playwright，请手动安装: pip install playwright")
 
         self.is_running_flag = True
         self.current_queue_index = 0
         self.current_loop_count = 0
 
         # 创建线程
-        self.thread = threading.Thread(target=self._run_task, args=(queue_data, timer_settings))
+        self.thread = threading.Thread(target=self._run_task, args=(queue_data,))
         self.thread.daemon = True
         self.thread.start()
 
@@ -119,12 +115,20 @@ class BrowserController(QObject):
         self._pause_event.set()  # 确保线程不会卡在暂停状态
         self.is_paused = False
 
+        # 清理资源
         if self.page:
             try:
                 self.page.close()
             except:
                 pass
             self.page = None
+
+        if self.context:
+            try:
+                self.context.close()
+            except:
+                pass
+            self.context = None
 
         if self.browser:
             try:
@@ -171,162 +175,64 @@ class BrowserController(QObject):
             self._log(f"安装{browser_type}浏览器失败: {e}")
             return False
 
-    def _init_browser(self):
+    def _initialize_browser(self):
         """初始化浏览器"""
+        print("正在启动Playwright...")
+        self.playwright = sync_playwright().start()
+        
+        print("正在启动浏览器...")
         try:
-            self._log("正在启动Playwright...")
-            self.playwright = sync_playwright().start()
-
-            self._log(f"正在启动{self.browser_type}浏览器...")
-            # 浏览器启动选项
-            browser_options = {
-                "headless": self.headless,
-                "args": [
-                    "--disable-gpu",
-                    "--no-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-setuid-sandbox",
-                    "--window-size=1920,1080",
+            # 获取浏览器可执行文件路径
+            executable_path = get_browser_path(self.headless)
+            print(f"使用浏览器: {executable_path}")
+            
+            # 启动浏览器，添加必要的启动参数
+            self.browser = self.playwright.chromium.launch(
+                headless=self.headless,
+                executable_path=executable_path,
+                args=[
+                    '--no-sandbox',                    # 禁用沙箱模式
+                    '--disable-dev-shm-usage',         # 禁用/dev/shm
+                    '--disable-gpu',                   # 禁用GPU加速
+                    '--disable-setuid-sandbox',        # 禁用setuid沙箱
+                    '--no-first-run',                  # 跳过首次运行界面
+                    '--no-default-browser-check',      # 禁用默认浏览器检查
+                    '--disable-notifications',         # 禁用通知
+                    '--disable-popup-blocking',        # 禁用弹窗拦截
+                    '--disable-infobars',             # 禁用信息栏
+                    '--ignore-certificate-errors',     # 忽略证书错误
+                    '--window-position=0,0',          # 窗口位置：左上角
+                    '--window-size=960,1080'          # 窗口大小：半屏宽度，全屏高度
                 ]
-            }
-
-            # 尝试启动Chromium浏览器
-            try:
-                self._log("尝试启动Chromium浏览器...")
-                self.browser = self.playwright.chromium.launch(**browser_options)
-                self._log("成功启动Chromium浏览器")
-                self.browser_type = "chromium"
-            except Exception as e:
-                self._log(f"启动Chromium失败: {e}")
-                # 尝试安装Chromium
-                if self._install_browser("chromium"):
-                    try:
-                        self.browser = self.playwright.chromium.launch(**browser_options)
-                        self._log("成功启动新安装的Chromium浏览器")
-                        self.browser_type = "chromium"
-                    except Exception as e:
-                        self._log(f"启动新安装的Chromium失败: {e}")
-                        raise e
-
-            # 如果Chromium未成功启动，尝试Edge
-            if not self.browser:
-                try:
-                    self._log("尝试启动Edge浏览器...")
-                    self.browser = self.playwright.chromium.launch(
-                        channel="msedge",
-                        **browser_options
-                    )
-                    self._log("成功启动Edge浏览器")
-                    self.browser_type = "msedge"
-                except Exception as e:
-                    self._log(f"启动Edge失败: {e}")
-                    # 尝试安装Edge
-                    if self._install_browser("msedge"):
-                        try:
-                            self.browser = self.playwright.chromium.launch(
-                                channel="msedge",
-                                **browser_options
-                            )
-                            self._log("成功启动新安装的Edge浏览器")
-                            self.browser_type = "msedge"
-                        except Exception as e:
-                            self._log(f"启动新安装的Edge失败: {e}")
-                            raise e
-
-            # 如果Edge也未成功启动，尝试Chrome
-            if not self.browser:
-                try:
-                    self._log("尝试启动Chrome浏览器...")
-                    self.browser = self.playwright.chromium.launch(
-                        channel="chrome",
-                        **browser_options
-                    )
-                    self._log("成功启动Chrome浏览器")
-                    self.browser_type = "chrome"
-                except Exception as e:
-                    self._log(f"启动Chrome失败: {e}")
-                    # 尝试安装Chrome
-                    if self._install_browser("chrome"):
-                        try:
-                            self.browser = self.playwright.chromium.launch(
-                                channel="chrome",
-                                **browser_options
-                            )
-                            self._log("成功启动新安装的Chrome浏览器")
-                            self.browser_type = "chrome"
-                        except Exception as e:
-                            self._log(f"启动新安装的Chrome失败: {e}")
-                            raise e
-
-            if not self.browser:
-                raise Exception("无法启动任何浏览器，请确保系统中已安装了Chrome、Edge或Chromium中的至少一个")
-
-            self._log("创建浏览器上下文...")
-            # 设置固定视口大小和位置
-            context = self.browser.new_context(
-                viewport={"width": 1920, "height": 1080},  # 固定视口大小为1920*1080
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
             )
-
-            self._log("创建新页面...")
-            self.page = context.new_page()
-
-            if not self.headless:
-                # 非无头模式才设置窗口大小和位置
-                self.page.evaluate("""
-                () => {
-                    // 将窗口移动到左上角并设置大小
-                    window.moveTo(0, 0);
-                    window.resizeTo(1920, 1080);
-                    // 确保内容区域也是1920*1080
-                    document.documentElement.style.width = '1920px';
-                    document.documentElement.style.height = '1080px';
-                    document.body.style.width = '1920px';
-                    document.body.style.height = '1080px';
-                }
-                """)
-            self._log("浏览器初始化成功！")
-
+            print("浏览器启动成功！")
+            
+            print("创建浏览器上下文...")
+            # 设置浏览器上下文视口大小为半屏
+            self.context = self.browser.new_context(
+                viewport={'width': 960, 'height': 1080},  # 半屏宽度，全屏高度
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'
+            )
+            
+            print("创建新页面...")
+            self.page = self.context.new_page()
+            
+            print("浏览器初始化成功！")
+            return True
         except Exception as e:
-            error_msg = f"初始化浏览器失败: {e}"
-            self._log(error_msg)
-            if self.playwright:
-                try:
-                    self.playwright.stop()
-                except:
-                    pass
-                self.playwright = None
-            raise Exception(error_msg)
+            print(f"浏览器初始化失败: {str(e)}")
+            self.stop()
+            return False
 
-    def _run_task(self, queue_data, timer_settings):
-        """运行任务"""
+    def _run_task(self, queue_data):
+        """运行任务
+        
+        Args:
+            queue_data (list): 任务队列数据
+        """
         try:
-            # 根据启动方式处理
-            if timer_settings['start_type'] == 'countdown':
-                # 倒计时启动
-                total_minutes = timer_settings['countdown_hours'] * 60 + timer_settings['countdown_minutes']
-                if total_minutes > 0:
-                    self._log(f"将在{total_minutes}分钟后启动...")
-                    time.sleep(total_minutes * 60)
-
-            elif timer_settings['start_type'] == 'time_point':
-                # 时间点启动
-                target_time = datetime.strptime(timer_settings['time_point'], "%H:%M").time()
-                now = datetime.now()
-                target_datetime = datetime.combine(now.date(), target_time)
-
-                # 如果目标时间已过，设置为明天
-                if target_datetime < now:
-                    target_datetime = datetime.combine(now.date() + timedelta(days=1), target_time)
-
-                # 等待到达目标时间
-                wait_seconds = (target_datetime - now).total_seconds()
-                if wait_seconds > 0:
-                    self._log(f"将在{target_time}启动，等待{wait_seconds/60:.1f}分钟...")
-                    time.sleep(wait_seconds)
-
             # 初始化浏览器
-            self._init_browser()
+            self._initialize_browser()
 
             # 开始执行队列
             self._log("开始执行浏览任务...")
@@ -390,13 +296,6 @@ class BrowserController(QObject):
             self._log("任务完成，关闭浏览器...")
             self.stop()
 
-            # 处理自动关机
-            if timer_settings.get('auto_shutdown', False) and self.queue_completed:
-                self._log("准备自动关机...")
-                shutdown_minutes = timer_settings.get('shutdown_time', 5)
-                from utils.helpers import shutdown_computer
-                shutdown_computer(shutdown_minutes)
-
         except Exception as e:
             self._log(f"任务执行过程出错: {e}")
         finally:
@@ -418,26 +317,21 @@ class BrowserController(QObject):
                     pass
 
             if not self.browser:
-                self._init_browser()
+                self._initialize_browser()
             
             # 创建新的页面
             self._log("创建新页面...")
             context = self.browser.new_context(
-                viewport={"width": 1920, "height": 1080},  # 设置固定视口大小
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"  # 设置UA
+                viewport={"width": 960, "height": 1080},  # 设置半屏视口大小
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"
             )
             self.page = context.new_page()
-
-            if not self.headless:
-                # 非无头模式才最大化窗口
-                self.page.evaluate("() => { window.moveTo(0, 0); window.resizeTo(window.screen.availWidth, window.screen.availHeight); }")
 
             # 确保浏览器可见
             self._ensure_browser_visible()
 
-            # 设置滚动速度和随机点击选项
+            # 设置滚动速度
             self.page.evaluate(f"window.__scroll_speed = {item.get('scroll_speed', 1.0)}")
-            self.page.evaluate(f"window.__random_click = {str(item.get('random_click', False)).lower()}")
 
             # 打开URL
             self._log(f"正在打开: {item['url']}")
@@ -500,33 +394,6 @@ class BrowserController(QObject):
                 # 执行滚动
                 self.page.evaluate(f"window.scrollTo(0, {scroll_y})")
 
-                # 如果启用随机点击
-                if self.page.evaluate("() => window.__random_click || false"):
-                    try:
-                        # 获取可见元素
-                        elements = self.page.evaluate("""
-                        () => {
-                            const elements = document.querySelectorAll('a, button, input[type="button"]');
-                            return Array.from(elements).filter(el => {
-                                const rect = el.getBoundingClientRect();
-                                return rect.width > 0 && rect.height > 0 && 
-                                       rect.top >= 0 && rect.left >= 0 &&
-                                       rect.bottom <= window.innerHeight &&
-                                       rect.right <= window.innerWidth;
-                            }).map(el => ({
-                                x: el.getBoundingClientRect().left + el.getBoundingClientRect().width / 2,
-                                y: el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2
-                            }));
-                        }
-                        """)
-                        
-                        # 随机选择一个元素点击
-                        if elements and random.random() < 0.1:  # 10%的几率点击
-                            element = random.choice(elements)
-                            self.page.mouse.click(element['x'], element['y'])
-                    except Exception as e:
-                        self._log(f"随机点击失败: {e}")
-
                 # 随机等待一小段时间，考虑滚动速度
                 wait_time = random.uniform(0.5, 2.0) / scroll_speed
                 time.sleep(wait_time)
@@ -553,10 +420,6 @@ class BrowserController(QObject):
                 }, 3000);
             }
             """)
-
-            # 模拟用户交互，通常会使窗口前置
-            self.page.mouse.move(100, 100)
-            self.page.mouse.click(100, 100)
 
         except Exception as e:
             self._log(f"确保浏览器可见失败: {e}")

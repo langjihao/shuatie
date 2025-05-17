@@ -112,8 +112,8 @@ class TimerTab(QWidget):
         browser_layout.addRow("页面滚动速度：", self.scroll_speed)
 
         # 随机点击选项
-        # self.random_click_checkbox = QCheckBox("启用随机点击（模拟真实浏览）")
-        # browser_layout.addRow("", self.random_click_checkbox)
+        self.random_click_checkbox = QCheckBox("启用随机点击（模拟真实浏览）")
+        browser_layout.addRow("", self.random_click_checkbox)
 
         # 添加组件到主布局
         main_layout.addWidget(self.start_group)
